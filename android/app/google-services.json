@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "901614618657",
+    "project_id": "cicd-98ebf",
+    "storage_bucket": "cicd-98ebf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:901614618657:android:d1697de7a96fd1cedd7b60",
+        "android_client_info": {
+          "package_name": "com.firebasechat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "901614618657-ttsqs2clokegl5etja78clv1huhn433f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfnR7Xic1evKfFmX1FOUJE7fuxfyxpTzs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "901614618657-ttsqs2clokegl5etja78clv1huhn433f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
