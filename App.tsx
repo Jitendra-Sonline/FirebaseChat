@@ -1,56 +1,139 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
-import UserListScreen from './src/Screen/UserListScreen';
-import ChatScreen from './src/Screen/ChatScreen';
-import UserInfoScreen from './src/Screen/UserInfoScreen';
+import React, { useState, createContext, useContext, useEffect, ReactNode } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { View, ActivityIndicator } from 'react-native';
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { MenuProvider } from "react-native-popup-menu";
+import { UnreadMessagesContext, UnreadMessagesProvider } from "./src/contexts/UnreadMessagesContext";
+import Chats from "./src/screens/Chats";
+import ChatHeader from "./src/components/ChatHeader";
+import ChatMenu from "./src/components/ChatMenu";
+import Users from "./src/screens/Users";
+import Profile from "./src/screens/Profile";
+import About from "./src/screens/About";
+import Help from "./src/screens/Help";
+import Account from "./src/screens/Account";
+import Group from "./src/screens/Group";
+import ChatInfo from "./src/screens/ChatInfo";
+import Login from "./src/screens/Login";
+import SignUp from "./src/screens/SignUp";
+import { AuthenticatedUserContext, AuthenticatedUserProvider } from "./src/contexts/AuthenticatedUserContext";
+import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
-
+// Types for navigation
 type RootStackParamList = {
-  UserInfo: undefined;
-  UserList: undefined;
-  Chat: undefined;
+  Home: undefined;
+  Chat: { chatName: string; id: string };
+  Users: undefined;
+  Profile: undefined;
+  About: undefined;
+  Help: undefined;
+  Account: undefined;
+  Group: undefined;
+  ChatInfo: undefined;
+  Login: undefined;
+  SignUp: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator();
 
-const AppNavigator: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const TabNavigator: React.FC = () => {
+  const { unreadCount, setUnreadCount } = useContext(UnreadMessagesContext)!;
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }:any) => ({
+        tabBarIcon: ({ focused, color, size }:any) => {
+          let iconName = route.name === 'Chats' ? 'chatbubbles' : 'settings';
+          iconName += focused ? '' : '-outline';
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: 'blue',
+        tabBarInactiveTintColor: 'gray',
+        headerShown: true,
+        presentation: 'modal',
+      })}
+    >
+      <Tab.Screen name="Chats" options={{ tabBarBadge: unreadCount > 0 ? unreadCount : undefined }}>
+        {() => <Chats setUnreadCount={setUnreadCount} />}
+      </Tab.Screen>
+      <Tab.Screen name="Settings" component={Profile} />
+    </Tab.Navigator>
+  );
+};
+
+const MainStack: React.FC = () => (
+  <Stack.Navigator>
+    <Stack.Screen name="Home" component={TabNavigator} options={{ headerShown: false }} />
+    <Stack.Screen
+      name="Chat"
+      component={Users}
+      options={({ route }:any) => ({
+        headerTitle: () => <ChatHeader chatName={route.params.chatName} chatId={route.params.id} />,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <ChatMenu chatName={route.params.chatName} chatId={route.params.id} />
+          </View>
+        ),
+      })}
+    />
+    <Stack.Screen name="Users" component={Users} options={{ title: 'Select User' }} />
+    <Stack.Screen name="Profile" component={Profile} />
+    <Stack.Screen name="About" component={About} />
+    <Stack.Screen name="Help" component={Help} />
+    <Stack.Screen name="Account" component={Account} />
+    <Stack.Screen name="Group" component={Group} options={{ title: 'New Group' }} />
+    <Stack.Screen name="ChatInfo" component={ChatInfo} options={{ title: 'Chat Information' }} />
+  </Stack.Navigator>
+);
+
+const AuthStack: React.FC = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name='Login' component={Login} />
+    <Stack.Screen name='SignUp' component={SignUp} />
+  </Stack.Navigator>
+);
+
+const RootNavigator: React.FC = () => {
+  const { user, setUser } = useContext(AuthenticatedUserContext)!;
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in by Firebase authentication state
-    const unsubscribe = auth().onAuthStateChanged(async (user: any) => {
-      console.log(user);
-
-      if (user) {
-        // Check if user exists in Firestore
-        const userDoc = await firestore().collection('users').doc(user.phoneNumber!).get();
-        setIsLoggedIn(userDoc.exists);
-      } else {
-        setIsLoggedIn(false);
-      }
+    const unsubscribeAuth = auth().onAuthStateChanged((authenticatedUser: FirebaseAuthTypes.User | null) => {
+      setUser(authenticatedUser || null);
       setIsLoading(false);
     });
 
-    return unsubscribe;
+    return unsubscribeAuth;
   }, []);
 
   if (isLoading) {
-    return null; // You can add a loading spinner here if you want
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size='large' />
+      </View>
+    );
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="UserInfo" component={UserInfoScreen} />
-        <Stack.Screen name="UserList" component={UserListScreen} />
-        <Stack.Screen name="Chat" component={ChatScreen as any} />
-      </Stack.Navigator>
+      {user ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };
 
-export default AppNavigator;
+const App: React.FC = () => {
+  return (
+    <MenuProvider>
+      <AuthenticatedUserProvider>
+        <UnreadMessagesProvider>
+          <RootNavigator />
+        </UnreadMessagesProvider>
+      </AuthenticatedUserProvider>
+    </MenuProvider>
+  );
+};
+
+export default App;
