@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Text, View, StyleSheet, Pressable, ScrollView, TouchableOpacity, Modal, TextInput,Alert } from "react-native";
 import { colors } from "../config/constants";
-import { auth, database } from '../config/firebase';
 import { useNavigation } from "@react-navigation/native";
-import { collection, doc, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
-import ContactRow from "../components/ContactRow";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 interface User {
@@ -23,13 +20,13 @@ const Group: React.FC = () => {
     const [groupName, setGroupName] = useState<string>("");
 
     useEffect(() => {
-        const collectionUserRef = collection(database, 'users');
-        const q = query(collectionUserRef, orderBy("name", "asc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
-        });
+        // const collectionUserRef = collection(database, 'users');
+        // const q = query(collectionUserRef, orderBy("name", "asc"));
+        // const unsubscribe = onSnapshot(q, (snapshot) => {
+        //     setUsers(snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
+        // });
 
-        return () => unsubscribe();
+        // return () => unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -41,14 +38,14 @@ const Group: React.FC = () => {
     }, [selectedItems]);
 
     const handleName = (user: User) => {
-        if (user.data().name) {
-            return user.data().email === auth?.currentUser?.email ? `${user.data().name}*(You)` : user.data().name;
-        }
+        // if (user.data().name) {
+        //     return user.data().email === auth?.currentUser?.email ? `${user.data().name}*(You)` : user.data().name;
+        // }
         return user.data().email ? user.data().email : '~ No Name or Email ~';
     }
 
     const handleSubtitle = (user: User) => {
-        return user.data().email === auth?.currentUser?.email ? 'Message yourself' : 'User status';
+        // return user.data().email === auth?.currentUser?.email ? 'Message yourself' : 'User status';
     }
 
     const handleOnPress = (user: User) => {
@@ -84,21 +81,21 @@ const Group: React.FC = () => {
             .filter(user => selectedItems.includes(user.id))
             .map(user => ({ email: user.data().email, name: user.data().name, deletedFromChat: false }));
 
-        usersToAdd.unshift({ email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false });
+        // usersToAdd.unshift({ email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false });
 
-        const newRef = doc(collection(database, "chats"));
-        setDoc(newRef, {
-            lastUpdated: Date.now(),
-            users: usersToAdd,
-            messages: [],
-            groupName: groupName,
-            groupAdmins: [auth?.currentUser?.email]
-        }).then(() => {
-            navigation.navigate('Chat', { id: newRef.id, chatName: groupName });
-            deSelectItems();
-            setModalVisible(false);
-            setGroupName("");
-        });
+        // const newRef = doc(collection(database, "chats"));
+        // setDoc(newRef, {
+        //     lastUpdated: Date.now(),
+        //     users: usersToAdd,
+        //     messages: [],
+        //     groupName: groupName,
+        //     groupAdmins: [auth?.currentUser?.email]
+        // }).then(() => {
+        //     navigation.navigate('Chat', { id: newRef.id, chatName: groupName });
+        //     deSelectItems();
+        //     setModalVisible(false);
+        //     setGroupName("");
+        // });
     }
 
     return (
@@ -109,7 +106,7 @@ const Group: React.FC = () => {
                 </View>
             ) : (
                 <ScrollView>
-                    {users.map(user => (
+                    {/* {users.map(user => (
                         user.data().email !== auth?.currentUser?.email &&
                         <React.Fragment key={user.id}>
                             <ContactRow
@@ -121,7 +118,7 @@ const Group: React.FC = () => {
                                 showForwardIcon={false}
                             />
                         </React.Fragment>
-                    ))}
+                    ))} */}
                 </ScrollView>
             )}
             {selectedItems.length > 0 && (

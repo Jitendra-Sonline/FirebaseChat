@@ -1,15 +1,15 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useState, useEffect, useCallback } from "react";
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { collection, query, orderBy, onSnapshot, where, doc, setDoc } from "firebase/firestore";
-import { auth, database } from "../config/firebase";
 import { colors } from "../config/constants";
 import Cell from "../components/Cell";
 import ContactRow from "../components/ContactRow";
+import firestore from '@react-native-firebase/firestore';
+import { getAuth } from "@react-native-firebase/auth";
 
 interface UserData {
     id: string;
-    data: () => {
+    data: {
         email: string;
         name: string;
         [key: string]: any;
@@ -23,23 +23,31 @@ interface ChatData {
 
 const Users: React.FC = () => {
     const navigation = useNavigation();
-    const [users, setUsers] = useState<UserData[]>([]);
-    const [existingChats, setExistingChats] = useState<ChatData[]>([]);
+
+
+    const [users, setUsers] = useState<{ id: string; data: any }[]>([]);
+    const [existingChats, setExistingChats] = useState<{ chatId: string; userEmails: any }[]>([]);
+
+    const auth = getAuth();
+
 
     useEffect(() => {
-        const collectionUserRef = collection(database, 'users');
-        const q = query(collectionUserRef, orderBy("name", "asc"));
-        const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, data: doc.data })));
-        });
+        // Fetch users ordered by name (ascending)
+        const unsubscribeUsers = firestore().collection('users').onSnapshot(snapshot => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
+        })
 
-        const collectionChatsRef = collection(database, 'chats');
-        const q2 = query(
-            collectionChatsRef,
-            where('users', "array-contains", { email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false }),
-            where('groupName', "==", '')
-        );
-        const unsubscribeChats = onSnapshot(q2, (snapshot) => {
+        // Fetch chats where current user is included and groupName is empty
+        const chatQuery = firestore()
+            .collection('chats')
+            .where('users', "array-contains", {
+                email: auth.currentUser?.email,
+                name: auth.currentUser?.displayName,
+                deletedFromChat: false
+            })
+            .where('groupName', "==", '');
+
+        const unsubscribeChats = chatQuery.onSnapshot(snapshot => {
             const existing = snapshot.docs.map(existingChat => ({
                 chatId: existingChat.id,
                 userEmails: existingChat.data().users
@@ -47,13 +55,15 @@ const Users: React.FC = () => {
             setExistingChats(existing);
         });
 
+        // Cleanup subscriptions on component unmount
         return () => {
             unsubscribeUsers();
             unsubscribeChats();
         };
-    }, []);
+    }, [auth]);
 
     const handleNewGroup = useCallback(() => {
+        //@ts-ignore
         navigation.navigate('Group');
     }, [navigation]);
 
@@ -61,15 +71,15 @@ const Users: React.FC = () => {
         Alert.alert('New user');
     }, []);
 
-    const handleNavigate = useCallback((user: UserData) => {
+    const handleNavigate = useCallback(async (user: UserData) => {
         let navigationChatID = '';
         let messageYourselfChatID = '';
 
         existingChats.forEach(existingChat => {
-            const isCurrentUserInTheChat = existingChat.userEmails.some(e => e.email === auth?.currentUser?.email);
-            const isMessageYourselfExists = existingChat.userEmails.filter(e => e.email === user.data().email).length;
+            const isCurrentUserInTheChat = existingChat.userEmails.some((e: any) => e.email === auth?.currentUser?.email);
+            const isMessageYourselfExists = existingChat.userEmails.filter((e: any) => e.email === user.data.email).length;
 
-            if (isCurrentUserInTheChat && existingChat.userEmails.some(e => e.email === user.data().email)) {
+            if (isCurrentUserInTheChat && existingChat.userEmails.some((e: any) => e.email === user.data.email)) {
                 navigationChatID = existingChat.chatId;
             }
 
@@ -77,42 +87,53 @@ const Users: React.FC = () => {
                 messageYourselfChatID = existingChat.chatId;
             }
 
-            if (auth?.currentUser?.email === user.data().email) {
+            if (auth?.currentUser?.email === user.data.email) {
                 navigationChatID = '';
             }
         });
 
+
+
         if (messageYourselfChatID) {
+            //@ts-ignore
             navigation.navigate('Chat', { id: messageYourselfChatID, chatName: handleName(user) });
         } else if (navigationChatID) {
+            //@ts-ignore
             navigation.navigate('Chat', { id: navigationChatID, chatName: handleName(user) });
         } else {
-            const newRef = doc(collection(database, "chats"));
-            setDoc(newRef, {
-                lastUpdated: Date.now(),
-                groupName: '', // It is not a group chat
-                users: [
-                    { email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false },
-                    { email: user.data().email, name: user.data().name, deletedFromChat: false }
-                ],
-                lastAccess: [
-                    { email: auth?.currentUser?.email, date: Date.now() },
-                    { email: user.data().email, date: '' }
-                ],
-                messages: []
-            }).then(() => {
+
+            const newRef = firestore().collection("chats").doc();
+            try {
+
+                await newRef.set({
+                    lastUpdated: Date.now(),
+                    groupName: '', // Not a group chat
+                    users: [
+                        // Add other users if needed
+                        { email: user.data.email, name: user.data.displayName, deletedFromChat: false }
+                    ],
+                    lastAccess: [
+                        { email: user.data.email, date: '' }
+                    ],
+                    messages: []
+                });
+                console.log(Date.now(), " <<<--->>> ", newRef.id);
+                // Navigate to the Chat screen with the new chat's ID and name
+                //@ts-ignore
                 navigation.navigate('Chat', { id: newRef.id, chatName: handleName(user) });
-            });
+            } catch (error) {
+                console.error("Error creating new chat:", error);
+            }
         }
     }, [existingChats, navigation]);
 
     const handleSubtitle = useCallback((user: UserData) => {
-        return user.data().email === auth?.currentUser?.email ? 'Message yourself' : 'User status';
+        return user.data.email === auth?.currentUser?.email ? 'Message yourself' : 'User status';
     }, []);
 
     const handleName = useCallback((user: UserData) => {
-        const name = user.data().name;
-        const email = user.data().email;
+        const name = user.data.displayName;
+        const email = user.data.email;
         if (name) {
             return email === auth?.currentUser?.email ? `${name}*(You)` : name;
         }

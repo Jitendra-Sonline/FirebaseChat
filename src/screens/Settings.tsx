@@ -1,26 +1,23 @@
-import React, { useCallback } from "react";
-import { Text, View, StyleSheet, Alert, Linking, TouchableOpacity } from "react-native";
+import React, { useCallback, useContext } from "react";
+import { View, StyleSheet, Alert, Linking } from "react-native";
 import ContactRow from "../components/ContactRow";
 import { colors } from "../config/constants";
 import Cell from "../components/Cell";
-import { auth } from '../config/firebase';
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { AuthenticatedUserContext } from "../contexts/AuthenticatedUserContext";
 
 interface SettingsProps {
-    navigation: any; // Adjust the type of 'navigation' based on your navigation setup, e.g., using `NavigationProp` if you're using React Navigation
+    navigation: any; 
 }
 
 const Settings: React.FC<SettingsProps> = ({ navigation }) => {
+    const { user, setUser } = useContext(AuthenticatedUserContext)!;
 
-    const openGithub = useCallback(async (url: string) => {
-        await Linking.openURL(url);
-    }, []);
 
     return (
         <View>
             <ContactRow
-                name={auth?.currentUser?.displayName ?? 'No name'}
-                subtitle={auth?.currentUser?.email}
+                name={user?.displayName ?? 'No name'}
+                subtitle={user?.email}
                 style={styles.contactRow}
                 onPress={() => {
                     navigation.navigate('Profile');
@@ -48,15 +45,7 @@ const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                 }}
             />
 
-            <Cell
-                title='Invite a friend'
-                icon='people-outline'
-                iconColor="black"
-                onPress={() => {
-                    Alert.alert('Share touched')
-                }}
-                showForwardIcon={false}
-            />
+          
         </View>
     );
 }

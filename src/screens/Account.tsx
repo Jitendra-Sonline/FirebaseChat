@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View, StyleSheet, Alert } from 'react-native';
 import { signOut, deleteUser } from '@react-native-firebase/auth';
 import { doc, deleteDoc } from '@react-native-firebase/firestore';
-import { auth } from '../config/firebase'; // Importing the auth instance
+
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import Cell from '../components/Cell';
 import { colors } from '../config/constants';
@@ -15,7 +15,7 @@ const Account: React.FC<AccountProps> = ({ navigation }) => {
 
     const onSignOut = async () => {
         try {
-            await signOut(auth); // Use auth instance here
+            // await signOut(); // Use auth instance here
             console.log('User signed out successfully');
         } catch (error) {
             console.log('Error logging out: ', error);
@@ -23,22 +23,22 @@ const Account: React.FC<AccountProps> = ({ navigation }) => {
     };
 
     const deleteAccount = async () => {
-        try {
-            const currentUser = auth().currentUser; // Ensure you're using auth() properly
-            if (currentUser) {
-                // Delete user from Firebase Authentication
-                await deleteUser(currentUser);
+        // try {
+        //     const currentUser = auth().currentUser; // Ensure you're using auth() properly
+        //     if (currentUser) {
+        //         // Delete user from Firebase Authentication
+        //         await deleteUser(currentUser);
     
-                // Delete user's document from Firestore
-                await deleteDoc(doc(FirebaseFirestoreTypes.firestore(), 'users', currentUser.email));
+        //         // Delete user's document from Firestore
+        //         await deleteDoc(doc(FirebaseFirestoreTypes.firestore(), 'users', currentUser.email));
                 
-                console.log('Account deleted successfully');
-            } else {
-                console.log('No user is signed in');
-            }
-        } catch (error) {
-            console.log('Error deleting account: ', error);
-        }
+        //         console.log('Account deleted successfully');
+        //     } else {
+        //         console.log('No user is signed in');
+        //     }
+        // } catch (error) {
+        //     console.log('Error deleting account: ', error);
+        // }
     };
 
     return (

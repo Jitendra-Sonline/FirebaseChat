@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Text, View, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useContext } from "react";
+import { StyleSheet, ScrollView, Pressable, ActivityIndicator, Text, View, TouchableOpacity, Alert } from "react-native";
 import ContactRow from '../components/ContactRow';
 import Separator from "../components/Separator";
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { auth, database } from '../config/firebase';
-import { collection, doc, where, query, onSnapshot, orderBy, setDoc, deleteDoc, DocumentSnapshot } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from "../config/constants";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { getAuth } from 'firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { AuthenticatedUserContext } from "../contexts/AuthenticatedUserContext";
 
 interface Chat {
     id: string;
-    data: () => {
+    data: {
         users: { email: string; name: string; deletedFromChat: boolean }[];
         messages: Array<{ user: { _id: string; name: string }; text: string; image?: string }>;
         lastUpdated: string;
@@ -25,10 +26,13 @@ interface ChatsProps {
 
 const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     const navigation = useNavigation();
+    const { user } = useContext(AuthenticatedUserContext)!;
     const [chats, setChats] = useState<Chat[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [newMessages, setNewMessages] = useState<Record<string, number>>({});
+    const auth = getAuth();
+ 
 
     useFocusEffect(
         React.useCallback(() => {
@@ -37,30 +41,37 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                     const storedMessages = await AsyncStorage.getItem('newMessages');
                     const parsedMessages = storedMessages ? JSON.parse(storedMessages) : {};
                     setNewMessages(parsedMessages);
-                    setUnreadCount(Object.values(parsedMessages).reduce((total, num) => total + num, 0));
+                    setUnreadCount(
+                        Object.values(parsedMessages)
+                            .filter((num): num is number => typeof num === 'number')
+                            .reduce((total, num) => total + num, 0)
+                    );
                 } catch (error) {
                     console.log('Error loading new messages from storage', error);
                 }
             };
 
-            const collectionRef = collection(database, 'chats');
-            const q = query(
-                collectionRef,
-                where('users', "array-contains", { email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false }),
-                orderBy("lastUpdated", "desc")
-            );
+            const chatsRef = firestore().collection('chats');
+            const chatQuery = chatsRef
+                .where('users', 'array-contains', {
+                    email: auth.currentUser?.email,
+                    name: user?.displayName,
+                    deletedFromChat: false
+                })
+                .orderBy('lastUpdated', 'desc');
 
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                setChats(snapshot.docs as DocumentSnapshot<Chat>[]);
+            const unsubscribe = chatQuery.onSnapshot((snapshot) => {
+                setChats(snapshot.docs as any);
                 setLoading(false);
 
+                // Track document changes to manage unread message count
                 snapshot.docChanges().forEach(change => {
-                    if (change.type === "modified") {
+                    if (change.type === 'modified') {
                         const chatId = change.doc.id;
                         const messages = change.doc.data().messages;
                         const firstMessage = messages[0];
 
-                        if (firstMessage.user._id !== auth?.currentUser?.email) {
+                        if (firstMessage.user._id !== auth.currentUser?.email) {
                             setNewMessages(prev => {
                                 const updatedMessages = { ...prev, [chatId]: (prev[chatId] || 0) + 1 };
                                 AsyncStorage.setItem('newMessages', JSON.stringify(updatedMessages));
@@ -71,6 +82,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                     }
                 });
             });
+
 
             loadNewMessages();
 
@@ -103,11 +115,11 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     };
 
     const handleChatName = (chat: Chat): string => {
-        const users = chat.data().users;
+        const users = chat.data.users;
         const currentUser = auth?.currentUser;
 
-        if (chat.data().groupName) {
-            return chat.data().groupName;
+        if (chat.data.groupName) {
+            return chat.data.groupName;
         }
 
         if (currentUser?.displayName) {
@@ -133,7 +145,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
             setUnreadCount(Object.values(updatedMessages).reduce((total, num) => total + num, 0));
             return updatedMessages;
         });
-
+        //@ts-ignore
         navigation.navigate('Chat', { id: chat.id, chatName: handleChatName(chat) });
     };
 
@@ -158,7 +170,22 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     };
 
     const handleFabPress = () => {
+        //@ts-ignore
         navigation.navigate('Users');
+    };
+
+    const updateChatUsers = async (chatId: string, updatedUsers: any[]) => {
+        const chatRef = firestore().collection('chats').doc(chatId);
+
+        // Update the 'users' field in the chat document, using merge to avoid overwriting other fields
+        await chatRef.set({ users: updatedUsers }, { merge: true });
+
+        // Check if all users are deleted from the chat
+        const deletedUsersCount = updatedUsers.filter(user => user.deletedFromChat).length;
+        if (deletedUsersCount === updatedUsers.length) {
+            // If all users are marked as deleted, delete the chat document
+            await chatRef.delete();
+        }
     };
 
     const handleDeleteChat = () => {
@@ -168,22 +195,16 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
             [
                 {
                     text: "Delete chat",
-                    onPress: () => {
+                    onPress: async () => {
                         selectedItems.forEach(chatId => {
                             const chat = chats.find(chat => chat.id === chatId);
-                            const updatedUsers = chat?.data().users.map(user =>
+                            const updatedUsers: any = chat?.data.users.map(user =>
                                 user.email === auth?.currentUser?.email
                                     ? { ...user, deletedFromChat: true }
                                     : user
                             );
-
                             if (chat) {
-                                setDoc(doc(database, 'chats', chatId), { users: updatedUsers }, { merge: true });
-
-                                const deletedUsers = updatedUsers.filter(user => user.deletedFromChat).length;
-                                if (deletedUsers === updatedUsers.length) {
-                                    deleteDoc(doc(database, 'chats', chatId));
-                                }
+                                updateChatUsers(chatId, updatedUsers)
                             }
                         });
                         deSelectItems();
@@ -196,19 +217,19 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     };
 
     const handleSubtitle = (chat: Chat) => {
-        const message = chat.data().messages[0];
+        const message = chat.data.messages[0];
         if (!message) return "No messages yet";
 
-        const isCurrentUser = auth?.currentUser?.email === message.user._id;
-        const userName = isCurrentUser ? 'You' : message.user.name.split(' ')[0];
+        // const isCurrentUser = auth?.currentUser?.email === message.user._id;
+        // const userName = isCurrentUser ? 'You' : message.user.name.split(' ')[0];
         const messageText = message.image ? 'sent an image' : message.text.length > 20 ? `${message.text.substring(0, 20)}...` : message.text;
 
-        return `${userName}: ${messageText}`;
+        return `${'userName'}: ${messageText}`;
     };
 
     const handleSubtitle2 = (chat: Chat) => {
-        const options = { year: '2-digit', month: 'numeric', day: 'numeric' };
-        return new Date(chat.data().lastUpdated).toLocaleDateString(undefined, options);
+        const options: any = { year: '2-digit', month: 'numeric', day: 'numeric' };
+        return new Date(chat.data.lastUpdated).toLocaleDateString(undefined, options);
     };
 
     return (

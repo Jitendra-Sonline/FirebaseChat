@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect, ReactNode } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { View, ActivityIndicator } from 'react-native';
@@ -20,6 +20,8 @@ import SignUp from "./src/screens/SignUp";
 import { AuthenticatedUserContext, AuthenticatedUserProvider } from "./src/contexts/AuthenticatedUserContext";
 import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import Chat from "./src/screens/Chat";
+import firebase from '@react-native-firebase/app';
 
 // Types for navigation
 type RootStackParamList = {
@@ -44,8 +46,8 @@ const TabNavigator: React.FC = () => {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }:any) => ({
-        tabBarIcon: ({ focused, color, size }:any) => {
+      screenOptions={({ route }: any) => ({
+        tabBarIcon: ({ focused, color, size }: any) => {
           let iconName = route.name === 'Chats' ? 'chatbubbles' : 'settings';
           iconName += focused ? '' : '-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -69,8 +71,8 @@ const MainStack: React.FC = () => (
     <Stack.Screen name="Home" component={TabNavigator} options={{ headerShown: false }} />
     <Stack.Screen
       name="Chat"
-      component={Users}
-      options={({ route }:any) => ({
+      component={Chat as any}
+      options={({ route }: any) => ({
         headerTitle: () => <ChatHeader chatName={route.params.chatName} chatId={route.params.id} />,
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -85,7 +87,7 @@ const MainStack: React.FC = () => (
     <Stack.Screen name="Help" component={Help} />
     <Stack.Screen name="Account" component={Account} />
     <Stack.Screen name="Group" component={Group} options={{ title: 'New Group' }} />
-    <Stack.Screen name="ChatInfo" component={ChatInfo} options={{ title: 'Chat Information' }} />
+    <Stack.Screen name="ChatInfo" component={ChatInfo as any} options={{ title: 'Chat Information' }} />
   </Stack.Navigator>
 );
 
@@ -99,6 +101,8 @@ const AuthStack: React.FC = () => (
 const RootNavigator: React.FC = () => {
   const { user, setUser } = useContext(AuthenticatedUserContext)!;
   const [isLoading, setIsLoading] = useState(true);
+
+  console.log("user", user);
 
   useEffect(() => {
     const unsubscribeAuth = auth().onAuthStateChanged((authenticatedUser: FirebaseAuthTypes.User | null) => {
@@ -125,6 +129,7 @@ const RootNavigator: React.FC = () => {
 };
 
 const App: React.FC = () => {
+
   return (
     <MenuProvider>
       <AuthenticatedUserProvider>

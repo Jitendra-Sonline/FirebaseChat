@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { colors } from '../config/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, getDoc } from 'firebase/firestore';
-import { database } from '../config/firebase';
 import Cell from '../components/Cell';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -28,29 +26,29 @@ const ChatInfo: React.FC<ChatInfoProps> = ({ route }) => {
 
   useEffect(() => {
     const fetchChatInfo = async () => {
-      try {
-        const chatRef = doc(database, 'chats', chatId);
-        const chatDoc = await getDoc(chatRef);
+      // try {
+      //   const chatRef = doc(database, 'chats', chatId);
+      //   const chatDoc = await getDoc(chatRef);
 
-        if (chatDoc.exists()) {
-          const chatData = chatDoc.data();
-          if (chatData) {
-            if (Array.isArray(chatData.users)) {
-              setUsers(chatData.users);
-            }
-            if (chatData.groupName) {
-              setGroupName(chatData.groupName);
-            }
-          } else {
-            setUsers([]);
-          }
-        } else {
-          Alert.alert('Error', 'Chat does not exist');
-        }
-      } catch (error) {
-        Alert.alert('Error', 'An error occurred while fetching chat info');
-        console.error('Error fetching chat info: ', error);
-      }
+      //   if (chatDoc.exists()) {
+      //     const chatData = chatDoc.data();
+      //     if (chatData) {
+      //       if (Array.isArray(chatData.users)) {
+      //         setUsers(chatData.users);
+      //       }
+      //       if (chatData.groupName) {
+      //         setGroupName(chatData.groupName);
+      //       }
+      //     } else {
+      //       setUsers([]);
+      //     }
+      //   } else {
+      //     Alert.alert('Error', 'Chat does not exist');
+      //   }
+      // } catch (error) {
+      //   Alert.alert('Error', 'An error occurred while fetching chat info');
+      //   console.error('Error fetching chat info: ', error);
+      // }
     };
 
     fetchChatInfo();

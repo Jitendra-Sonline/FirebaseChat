@@ -1,10 +1,13 @@
+import { getAuth } from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { View, Text, Alert } from 'react-native';
 import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import firestore from '@react-native-firebase/firestore';
 
 
-const ChatMenu = ({ chatName, chatId }:any) => {
+const ChatMenu = ({ chatName, chatId }: any) => {
     const navigation = useNavigation();
 
     const handleDeleteChat = async () => {
@@ -15,23 +18,35 @@ const ChatMenu = ({ chatName, chatId }:any) => {
                 {
                     text: "Delete chat",
                     onPress: async () => {
-                        const chatRef = doc(database, 'chats', chatId);
-                        const chatDoc = await getDoc(chatRef);
+                        const auth = getAuth();
 
-                        if (chatDoc.exists()) {
-                            const updatedUsers = chatDoc.data().users.map(user =>
-                                user.email === auth?.currentUser?.email
-                                    ? { ...user, deletedFromChat: true }
-                                    : user
-                            );
+                        try {
+                            // Reference the specific chat document
+                            const chatRef = firestore().collection('chats').doc(chatId);
+                            const chatDoc = await chatRef.get();
 
-                            await setDoc(chatRef, { users: updatedUsers }, { merge: true });
+                            if (chatDoc.exists) {
+                                const updatedUsers = chatDoc.data()?.users.map((user: any) =>
+                                    user.email === auth.currentUser?.email
+                                        ? { ...user, deletedFromChat: true }
+                                        : user
+                                );
 
-                            const deletedUsers = updatedUsers.filter(user => user.deletedFromChat).length;
-                            if (deletedUsers === updatedUsers.length) {
-                                await deleteDoc(chatRef);
+                                // Update the document with modified users array, merging changes
+                                await chatRef.set({ users: updatedUsers }, { merge: true });
+
+                                // Check if all users have been marked as deleted
+                                const deletedUsers = updatedUsers.filter((user: any) => user.deletedFromChat).length;
+                                if (deletedUsers === updatedUsers.length) {
+                                    // Delete the document if all users are marked as deleted
+                                    await chatRef.delete();
+                                }
+
+                                // Navigate back after deletion
+                                navigation.goBack();
                             }
-                            navigation.goBack();
+                        } catch (error) {
+                            console.error("Error handling chat deletion:", error);
                         }
                     },
                 },
@@ -47,7 +62,10 @@ const ChatMenu = ({ chatName, chatId }:any) => {
                 <Ionicons name="ellipsis-vertical" size={25} color="black" style={{ marginRight: 15 }} />
             </MenuTrigger>
             <MenuOptions>
-                <MenuOption onSelect={() => navigation.navigate('ChatInfo', { chatId, chatName })}>
+                <MenuOption onSelect={() =>
+                    //@ts-ignore
+                    navigation.navigate('ChatInfo', { chatId, chatName })}
+                >
                     <View style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}>
                         <Text style={{ fontWeight: '500', }}>Chat Info</Text>
                     </View>
@@ -57,10 +75,11 @@ const ChatMenu = ({ chatName, chatId }:any) => {
                         <Text style={{ fontWeight: '500', }}>Delete Chat</Text>
                     </View>
                 </MenuOption>
-                {/* Add more menu options here */}
             </MenuOptions>
         </Menu>
     );
 };
 
 export default ChatMenu;
+
+

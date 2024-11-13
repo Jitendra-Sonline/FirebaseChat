@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View, TextInput, Image, SafeAreaView, TouchableOpacity, StatusBar, Alert } from "react-native";
-import { auth } from "../config/firebase";
 import { colors } from "../config/constants";
-import { signInWithEmailAndPassword } from "@react-native-firebase/auth";
 
-const backImage = require("../assets/background.png");
+const backImage = require("../images/background.png");
 
 interface LoginProps {
     navigation: any;
@@ -16,9 +14,9 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
     const onHandleLogin = () => {
         if (email !== "" && password !== "") {
-            signInWithEmailAndPassword(auth, email, password)
-                .then(() => console.log("Login success"))
-                .catch((err) => Alert.alert("Login error", err.message));
+            // signInWithEmailAndPassword(email, password)
+            //     .then(() => console.log("Login success"))
+            //     .catch((err) => Alert.alert("Login error", err.message));
         }
     };
 

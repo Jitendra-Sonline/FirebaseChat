@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet, Alert } from "react-native";
 import Cell from "../components/Cell";
 import { colors } from "../config/constants";
 

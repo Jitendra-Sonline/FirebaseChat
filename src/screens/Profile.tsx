@@ -1,73 +1,34 @@
-import React from "react";
-import { SafeAreaView, Text, TouchableOpacity, View, StyleSheet, Alert } from "react-native";
+import React, { useContext } from "react";
+import { SafeAreaView, View, StyleSheet } from "react-native";
 import { colors } from "../config/constants";
-import { auth } from '../config/firebase';
 import Cell from "../components/Cell";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { AuthenticatedUserContext } from "../contexts/AuthenticatedUserContext";
 
 const Profile: React.FC = () => {
+    const { user } = useContext(AuthenticatedUserContext)!;
 
-    const handleChangeName = () => {
-        Alert.alert('Change Name', 'This feature is coming soon.');
-    };
-
-    const handleDisplayEmail = () => {
-        Alert.alert('Display Email', `Your email is: ${auth?.currentUser?.email}`);
-    };
-
-    const handleChangeProfilePicture = () => {
-        Alert.alert('Change Profile Picture', 'This feature is coming soon.');
-    };
-
-    const handleShowProfilePicture = () => {
-        Alert.alert('Show Profile Picture', 'This feature is coming soon.');
-    };
-
-    const initials = auth?.currentUser?.displayName
-        ? auth.currentUser.displayName.split(' ').map(name => name[0]).join('')
-        : auth?.currentUser?.email?.charAt(0).toUpperCase();
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Profile Avatar */}
-            <View style={styles.avatarContainer}>
-                <TouchableOpacity style={styles.avatar} onPress={handleShowProfilePicture}>
-                    <Text style={styles.avatarLabel}>{initials}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.cameraIcon} onPress={handleChangeProfilePicture}>
-                    <Ionicons name="camera-outline" size={24} color="white" />
-                </TouchableOpacity>
-            </View>
 
-            {/* User Info Cells */}
             <View style={styles.infoContainer}>
                 <Cell
                     title='Name'
                     icon='person-outline'
                     iconColor="black"
-                    subtitle={auth?.currentUser?.displayName || "No name set"}
+                    subtitle={user?.displayName || "No name set"}
                     secondIcon='pencil-outline'
-                    onPress={handleChangeName}
+                    onPress={() => { }}
                     style={styles.cell}
                 />
 
                 <Cell
                     title='Email'
-                    subtitle={auth?.currentUser?.email}
+                    subtitle={user?.email}
                     icon='mail-outline'
                     iconColor="black"
                     secondIcon='pencil-outline'
-                    onPress={handleDisplayEmail}
-                    style={styles.cell}
-                />
-
-                <Cell
-                    title='About'
-                    subtitle='Available'
-                    icon='information-circle-outline'
-                    iconColor="black"
-                    secondIcon='pencil-outline'
-                    onPress={() => Alert.alert('About', 'This feature is coming soon.')}
+                    onPress={() => { }}
                     style={styles.cell}
                 />
             </View>

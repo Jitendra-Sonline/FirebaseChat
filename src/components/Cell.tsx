@@ -1,12 +1,13 @@
 import React from "react";
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { colors } from "../config/constants";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
-const Cell = ({ title, icon, iconColor='white', tintColor, style, onPress, secondIcon, subtitle, showForwardIcon = true }:any) => {
+const Cell = ({ title, icon, iconColor='white', tintColor, style, onPress, subtitle }:any) => {
     return (
         <TouchableOpacity style={[styles.cell, style]} onPress={onPress}>
             <View style={[styles.iconContainer, { backgroundColor: tintColor }]}>
-                <Ionicons name={icon} size={24} marginStart={4} color={iconColor} />
+                <Ionicons name={icon} size={24}  color={iconColor} />
             </View>
 
             <View style={styles.textsContainer}>
@@ -19,8 +20,6 @@ const Cell = ({ title, icon, iconColor='white', tintColor, style, onPress, secon
                     </Text>
                 )}
             </View>
-            {showForwardIcon && <Ionicons name={secondIcon ?? 'chevron-forward-outline'} size={20} />}
-
         </TouchableOpacity >
     )
 }
