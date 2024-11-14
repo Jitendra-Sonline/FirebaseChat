@@ -6,13 +6,12 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from "../config/constants";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getAuth } from 'firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { AuthenticatedUserContext } from "../contexts/AuthenticatedUserContext";
 
 interface Chat {
     id: string;
-    data: {
+    _data: {
         users: { email: string; name: string; deletedFromChat: boolean }[];
         messages: Array<{ user: { _id: string; name: string }; text: string; image?: string }>;
         lastUpdated: string;
@@ -31,8 +30,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [newMessages, setNewMessages] = useState<Record<string, number>>({});
-    const auth = getAuth();
- 
+
 
     useFocusEffect(
         React.useCallback(() => {
@@ -50,28 +48,19 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                     console.log('Error loading new messages from storage', error);
                 }
             };
-
-            const chatsRef = firestore().collection('chats');
-            const chatQuery = chatsRef
-                .where('users', 'array-contains', {
-                    email: auth.currentUser?.email,
-                    name: user?.displayName,
-                    deletedFromChat: false
-                })
-                .orderBy('lastUpdated', 'desc');
-
-            const unsubscribe = chatQuery.onSnapshot((snapshot) => {
+            const chatQuery = firestore().collection('chats').orderBy('lastUpdated', 'desc').onSnapshot((snapshot) => {
                 setChats(snapshot.docs as any);
                 setLoading(false);
-
                 // Track document changes to manage unread message count
                 snapshot.docChanges().forEach(change => {
+                    const messages = change.doc.data().messages;
+
                     if (change.type === 'modified') {
                         const chatId = change.doc.id;
                         const messages = change.doc.data().messages;
                         const firstMessage = messages[0];
 
-                        if (firstMessage.user._id !== auth.currentUser?.email) {
+                        if (firstMessage.user._id !== user?.email) {
                             setNewMessages(prev => {
                                 const updatedMessages = { ...prev, [chatId]: (prev[chatId] || 0) + 1 };
                                 AsyncStorage.setItem('newMessages', JSON.stringify(updatedMessages));
@@ -82,11 +71,8 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                     }
                 });
             });
-
-
             loadNewMessages();
-
-            return () => unsubscribe();
+            return () => chatQuery();
         }, [])
     );
 
@@ -98,7 +84,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
         if (selectedItems.length > 0) {
             navigation.setOptions({
                 headerRight: () => (
-                    <TouchableOpacity style={styles.trashBin} onPress={handleDeleteChat}>
+                    <TouchableOpacity style={styles.trashBin}>
                         <Ionicons name="trash" size={24} color={colors.teal} />
                     </TouchableOpacity>
                 ),
@@ -115,21 +101,13 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
     };
 
     const handleChatName = (chat: Chat): string => {
-        const users = chat.data.users;
-        const currentUser = auth?.currentUser;
-
-        if (chat.data.groupName) {
-            return chat.data.groupName;
+        const users = chat._data.users;
+        if (chat._data.groupName) {
+            return chat._data.groupName;
         }
-
-        if (currentUser?.displayName) {
-            return users[0].name === currentUser.displayName ? users[1].name : users[0].name;
+        if (users.length > 0) {
+            return users[0].name;
         }
-
-        if (currentUser?.email) {
-            return users[0].email === currentUser.email ? users[1].email : users[0].email;
-        }
-
         return '~ No Name or Email ~';
     };
 
@@ -174,62 +152,24 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
         navigation.navigate('Users');
     };
 
-    const updateChatUsers = async (chatId: string, updatedUsers: any[]) => {
-        const chatRef = firestore().collection('chats').doc(chatId);
-
-        // Update the 'users' field in the chat document, using merge to avoid overwriting other fields
-        await chatRef.set({ users: updatedUsers }, { merge: true });
-
-        // Check if all users are deleted from the chat
-        const deletedUsersCount = updatedUsers.filter(user => user.deletedFromChat).length;
-        if (deletedUsersCount === updatedUsers.length) {
-            // If all users are marked as deleted, delete the chat document
-            await chatRef.delete();
-        }
-    };
-
-    const handleDeleteChat = () => {
-        Alert.alert(
-            selectedItems.length > 1 ? "Delete selected chats?" : "Delete this chat?",
-            "Messages will be removed from this device.",
-            [
-                {
-                    text: "Delete chat",
-                    onPress: async () => {
-                        selectedItems.forEach(chatId => {
-                            const chat = chats.find(chat => chat.id === chatId);
-                            const updatedUsers: any = chat?.data.users.map(user =>
-                                user.email === auth?.currentUser?.email
-                                    ? { ...user, deletedFromChat: true }
-                                    : user
-                            );
-                            if (chat) {
-                                updateChatUsers(chatId, updatedUsers)
-                            }
-                        });
-                        deSelectItems();
-                    },
-                },
-                { text: "Cancel" },
-            ],
-            { cancelable: true }
-        );
-    };
-
+    
     const handleSubtitle = (chat: Chat) => {
-        const message = chat.data.messages[0];
-        if (!message) return "No messages yet";
+        try {
+            const message = chat?._data?.messages[0];
+            if (!message) return "No messages yet";
+            const isCurrentUser = user?.email === message.user._id;
+            const userName = isCurrentUser ? 'You' : message.user.name.split(' ')[0];
+            const messageText = message.text;
+            return `${userName}: ${messageText}`;
+        } catch (error) {
+            return `NA`;
+        }
 
-        // const isCurrentUser = auth?.currentUser?.email === message.user._id;
-        // const userName = isCurrentUser ? 'You' : message.user.name.split(' ')[0];
-        const messageText = message.image ? 'sent an image' : message.text.length > 20 ? `${message.text.substring(0, 20)}...` : message.text;
-
-        return `${'userName'}: ${messageText}`;
     };
 
     const handleSubtitle2 = (chat: Chat) => {
         const options: any = { year: '2-digit', month: 'numeric', day: 'numeric' };
-        return new Date(chat.data.lastUpdated).toLocaleDateString(undefined, options);
+        return new Date(chat._data.lastUpdated).toLocaleDateString(undefined, options);
     };
 
     return (
@@ -260,11 +200,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                         ))
                     )}
                     <Separator />
-                    <View style={styles.blankContainer}>
-                        <Text style={{ fontSize: 12, margin: 15 }}>
-                            <Ionicons name="lock-open" size={12} style={{ color: '#565656' }} /> Your personal messages are not <Text style={{ color: colors.teal }}>end-to-end-encrypted</Text>
-                        </Text>
-                    </View>
+                 
                 </ScrollView>
             )}
             <TouchableOpacity style={styles.fab} onPress={handleFabPress}>
@@ -319,15 +255,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         color: colors.teal
     },
-    newMessageBadge: {
-        backgroundColor: colors.teal,
-        color: 'white',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 12,
-        fontSize: 12,
-        marginLeft: 8
-    }
+   
 });
 
 export default Chats;

@@ -8,7 +8,7 @@ const ContactRow = ({ name, subtitle, onPress, style, onLongPress, selected, sho
         <TouchableOpacity style={[styles.row, style]} onPress={onPress} onLongPress={onLongPress}>
             <View style={styles.avatar}>
                 <Text style={styles.avatarLabel}>
-                    {name.trim().split(' ').reduce((prev:any, current:any) => `${prev}${current[0]}`, '')}
+                    {name?.trim()?.split(' ')?.reduce((prev:any, current:any) => `${prev}${current[0]}`, '')}
                 </Text>
             </View>
 
@@ -48,9 +48,9 @@ const styles = StyleSheet.create({
         borderColor: '#e0e0e0',
     },
     avatar: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.primary
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     },
     name: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '400',
     },
     subtitle: {
         marginTop: 4,

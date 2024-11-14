@@ -10,9 +10,7 @@ import ChatHeader from "./src/components/ChatHeader";
 import ChatMenu from "./src/components/ChatMenu";
 import Users from "./src/screens/Users";
 import Profile from "./src/screens/Profile";
-import About from "./src/screens/About";
-import Help from "./src/screens/Help";
-import Account from "./src/screens/Account";
+
 import Group from "./src/screens/Group";
 import ChatInfo from "./src/screens/ChatInfo";
 import Login from "./src/screens/Login";
@@ -21,7 +19,6 @@ import { AuthenticatedUserContext, AuthenticatedUserProvider } from "./src/conte
 import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Chat from "./src/screens/Chat";
-import firebase from '@react-native-firebase/app';
 
 // Types for navigation
 type RootStackParamList = {
@@ -29,9 +26,6 @@ type RootStackParamList = {
   Chat: { chatName: string; id: string };
   Users: undefined;
   Profile: undefined;
-  About: undefined;
-  Help: undefined;
-  Account: undefined;
   Group: undefined;
   ChatInfo: undefined;
   Login: undefined;
@@ -48,7 +42,7 @@ const TabNavigator: React.FC = () => {
     <Tab.Navigator
       screenOptions={({ route }: any) => ({
         tabBarIcon: ({ focused, color, size }: any) => {
-          let iconName = route.name === 'Chats' ? 'chatbubbles' : 'settings';
+          let iconName = route.name === 'Chats' ? 'chatbubbles' : 'person';
           iconName += focused ? '' : '-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -61,7 +55,7 @@ const TabNavigator: React.FC = () => {
       <Tab.Screen name="Chats" options={{ tabBarBadge: unreadCount > 0 ? unreadCount : undefined }}>
         {() => <Chats setUnreadCount={setUnreadCount} />}
       </Tab.Screen>
-      <Tab.Screen name="Settings" component={Profile} />
+      <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>
   );
 };
@@ -83,9 +77,7 @@ const MainStack: React.FC = () => (
     />
     <Stack.Screen name="Users" component={Users} options={{ title: 'Select User' }} />
     <Stack.Screen name="Profile" component={Profile} />
-    <Stack.Screen name="About" component={About} />
-    <Stack.Screen name="Help" component={Help} />
-    <Stack.Screen name="Account" component={Account} />
+
     <Stack.Screen name="Group" component={Group} options={{ title: 'New Group' }} />
     <Stack.Screen name="ChatInfo" component={ChatInfo as any} options={{ title: 'Chat Information' }} />
   </Stack.Navigator>

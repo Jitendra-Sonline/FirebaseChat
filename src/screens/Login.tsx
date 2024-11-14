@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View, TextInput, Image, SafeAreaView, TouchableOpacity, StatusBar, Alert } from "react-native";
 import { colors } from "../config/constants";
+import auth from '@react-native-firebase/auth';
 
 const backImage = require("../images/background.png");
 
@@ -10,13 +11,24 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ navigation }) => {
     const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
 
     const onHandleLogin = () => {
-        if (email !== "" && password !== "") {
-            // signInWithEmailAndPassword(email, password)
-            //     .then(() => console.log("Login success"))
-            //     .catch((err) => Alert.alert("Login error", err.message));
+        if (email !== "") {
+            auth().signInWithEmailAndPassword(`${email}@example.com`, 'SuperSecretPassword!')
+                .then(() => {
+                    console.log('User account created & signed in!');
+                })
+                .catch(error => {
+                    if (error.code === 'auth/email-already-in-use') {
+                        console.log('That email address is already in use!');
+                    }
+
+                    if (error.code === 'auth/invalid-email') {
+                        console.log('That email address is invalid!');
+                    }
+
+                    console.error(error);
+                });
         }
     };
 
@@ -35,16 +47,6 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
                     autoFocus={true}
                     value={email}
                     onChangeText={(text) => setEmail(text)}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter password"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    textContentType="password"
-                    value={password}
-                    onChangeText={(text) => setPassword(text)}
                 />
                 <TouchableOpacity style={styles.button} onPress={onHandleLogin}>
                     <Text style={{ fontWeight: 'bold', color: '#fff', fontSize: 18 }}> Log In</Text>

@@ -1,34 +1,42 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, Image, SafeAreaView, TouchableOpacity, StatusBar } from "react-native";
 import { colors } from '../config/constants';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+
 
 const backImage = require("../images/background.png");
 
 interface SignUpProps {
-  navigation: any; // Adjust the type of 'navigation' based on your navigation setup
+    navigation: any; // Adjust the type of 'navigation' based on your navigation setup
 }
 
 const SignUp: React.FC<SignUpProps> = ({ navigation }) => {
 
     const [email, setEmail] = useState<string>('');
     const [username, setUsername] = useState<string>('');
-    const [password, setPassword] = useState<string>('');
 
-    const onHandleSignup = () => {
-        if (email !== '' && password !== '') {
-            // createUserWithEmailAndPassword(auth, email, password)
-            //     .then((cred) => {
-            //         updateProfile(cred.user, { displayName: username }).then(() => {
-            //             setDoc(doc(database, 'users', cred.user.email), {
-            //                 id: cred.user.uid,
-            //                 email: cred.user.email,
-            //                 name: cred.user.displayName,
-            //                 about: 'Available'
-            //             });
-            //         });
-            //         console.log('Signup success: ' + cred.user.email);
-            //     })
-            //     .catch((err) => Alert.alert("Signup error", err.message));
+
+    const onHandleSignup = async () => {
+        if (email !== '') {
+            try {
+                // Create a new user with email and password
+                const cred = await auth().createUserWithEmailAndPassword(`${email}@example.com`, 'SuperSecretPassword!');
+
+                if (cred.user) {
+                    // Update the user's profile with a display name
+                    await cred.user.updateProfile({ displayName: username });
+                    // Add user details to Firestore
+                    await firestore().collection('users').doc(cred.user.email ?? '').set({
+                        id: cred.user.uid,
+                        email: cred.user.email,
+                        name: username,
+                        about: 'Available'
+                    });
+                }
+            } catch (error) {
+                console.log("Error registering user:", error);
+            }
         }
     };
 
@@ -57,16 +65,6 @@ const SignUp: React.FC<SignUpProps> = ({ navigation }) => {
                     autoFocus={true}
                     value={email}
                     onChangeText={(text) => setEmail(text)}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter password"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    textContentType="password"
-                    value={password}
-                    onChangeText={(text) => setPassword(text)}
                 />
                 <TouchableOpacity style={styles.button} onPress={onHandleSignup}>
                     <Text style={{ fontWeight: 'bold', color: '#fff', fontSize: 18 }}> Sign Up</Text>

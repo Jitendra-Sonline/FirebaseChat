@@ -93,6 +93,8 @@ const Users: React.FC = () => {
         });
 
 
+        console.log(navigationChatID);
+        console.log(messageYourselfChatID);
 
         if (messageYourselfChatID) {
             //@ts-ignore
@@ -101,16 +103,14 @@ const Users: React.FC = () => {
             //@ts-ignore
             navigation.navigate('Chat', { id: navigationChatID, chatName: handleName(user) });
         } else {
-
-            const newRef = firestore().collection("chats").doc();
             try {
-
+                const newRef = firestore().collection("chats").doc();
                 await newRef.set({
                     lastUpdated: Date.now(),
                     groupName: '', // Not a group chat
                     users: [
                         // Add other users if needed
-                        { email: user.data.email, name: user.data.displayName, deletedFromChat: false }
+                        { email: user.data.email, name: user.data.name, deletedFromChat: false }
                     ],
                     lastAccess: [
                         { email: user.data.email, date: '' }
@@ -132,7 +132,7 @@ const Users: React.FC = () => {
     }, []);
 
     const handleName = useCallback((user: UserData) => {
-        const name = user.data.displayName;
+        const name = user.data.name;
         const email = user.data.email;
         if (name) {
             return email === auth?.currentUser?.email ? `${name}*(You)` : name;

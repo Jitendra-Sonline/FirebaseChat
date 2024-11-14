@@ -3,7 +3,7 @@ import { SafeAreaView, View, StyleSheet } from "react-native";
 import { colors } from "../config/constants";
 import Cell from "../components/Cell";
 import { AuthenticatedUserContext } from "../contexts/AuthenticatedUserContext";
-
+import auth from '@react-native-firebase/auth';
 const Profile: React.FC = () => {
     const { user } = useContext(AuthenticatedUserContext)!;
 
@@ -29,6 +29,15 @@ const Profile: React.FC = () => {
                     iconColor="black"
                     secondIcon='pencil-outline'
                     onPress={() => { }}
+                    style={styles.cell}
+                />
+                <Cell
+                    title='Logout'
+                    subtitle={''}
+                    icon='log-out'
+                    iconColor="black"
+                    secondIcon='pencil-outline'
+                    onPress={() => { auth().signOut().then(() => console.log('User signed out!')) }}
                     style={styles.cell}
                 />
             </View>
