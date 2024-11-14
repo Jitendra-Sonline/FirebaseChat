@@ -67,6 +67,7 @@ const MainStack: React.FC = () => (
       name="Chat"
       component={Chat as any}
       options={({ route }: any) => ({
+        headerBackTitle: '',
         headerTitle: () => <ChatHeader chatName={route.params.chatName} chatId={route.params.id} />,
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -75,11 +76,10 @@ const MainStack: React.FC = () => (
         ),
       })}
     />
-    <Stack.Screen name="Users" component={Users} options={{ title: 'Select User' }} />
+    <Stack.Screen name="Users" component={Users} options={{ title: 'Select User', headerBackTitle: '', }} />
     <Stack.Screen name="Profile" component={Profile} />
-
-    <Stack.Screen name="Group" component={Group} options={{ title: 'New Group' }} />
-    <Stack.Screen name="ChatInfo" component={ChatInfo as any} options={{ title: 'Chat Information' }} />
+    <Stack.Screen name="Group" component={Group} options={{ title: 'New Group', headerBackTitle: '', }} />
+    <Stack.Screen name="ChatInfo" component={ChatInfo as any} options={{ title: 'Chat Information', headerBackTitle: '', }} />
   </Stack.Navigator>
 );
 

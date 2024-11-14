@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Text, View, StyleSheet, Pressable, ScrollView, TouchableOpacity, Modal, TextInput,Alert } from "react-native";
+import { Text, View, StyleSheet, Pressable, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from "react-native";
 import { colors } from "../config/constants";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import ContactRow from "../components/ContactRow";
+import auth from "@react-native-firebase/auth";
+import firestore from '@react-native-firebase/firestore';
+
 
 interface User {
+    about: string;
+    email: string;
     id: string;
-    data: () => {
-        name: string;
-        email: string;
-    };
+    name: string;
 }
 
 const Group: React.FC = () => {
@@ -18,15 +21,20 @@ const Group: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [groupName, setGroupName] = useState<string>("");
-
+    const currentUser = auth().currentUser;
     useEffect(() => {
-        // const collectionUserRef = collection(database, 'users');
-        // const q = query(collectionUserRef, orderBy("name", "asc"));
-        // const unsubscribe = onSnapshot(q, (snapshot) => {
-        //     setUsers(snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
-        // });
-
-        // return () => unsubscribe();
+        const unsubscribeUsers = firestore().collection('users').onSnapshot(snapshot => {
+            const users: User[] = snapshot.docs.map(doc => ({
+                about: doc.data().about,
+                email: doc.data().email,
+                id: doc.id,
+                name: doc.data().name,
+            }));
+            setUsers(users);
+        })
+        return () => {
+            unsubscribeUsers();
+        };
     }, []);
 
     useEffect(() => {
@@ -38,14 +46,14 @@ const Group: React.FC = () => {
     }, [selectedItems]);
 
     const handleName = (user: User) => {
-        // if (user.data().name) {
-        //     return user.data().email === auth?.currentUser?.email ? `${user.data().name}*(You)` : user.data().name;
-        // }
-        return user.data().email ? user.data().email : '~ No Name or Email ~';
+        if (user?.name) {
+            return user.email === currentUser?.email ? `${user.name}*(You)` : user.name;
+        }
+        return user.email ? user.email : '~ No Name or Email ~';
     }
 
     const handleSubtitle = (user: User) => {
-        // return user.data().email === auth?.currentUser?.email ? 'Message yourself' : 'User status';
+        return user.email === currentUser?.email ? 'Message yourself' : 'User status';
     }
 
     const handleOnPress = (user: User) => {
@@ -71,7 +79,7 @@ const Group: React.FC = () => {
         setModalVisible(true);
     }
 
-    const handleCreateGroup = () => {
+    const handleCreateGroup = async () => {
         if (!groupName.trim()) {
             Alert.alert('Group name cannot be empty');
             return;
@@ -79,23 +87,26 @@ const Group: React.FC = () => {
 
         const usersToAdd = users
             .filter(user => selectedItems.includes(user.id))
-            .map(user => ({ email: user.data().email, name: user.data().name, deletedFromChat: false }));
+            .map(user => ({ email: user.email, name: user.name, deletedFromChat: false }));
 
-        // usersToAdd.unshift({ email: auth?.currentUser?.email, name: auth?.currentUser?.displayName, deletedFromChat: false });
 
-        // const newRef = doc(collection(database, "chats"));
-        // setDoc(newRef, {
-        //     lastUpdated: Date.now(),
-        //     users: usersToAdd,
-        //     messages: [],
-        //     groupName: groupName,
-        //     groupAdmins: [auth?.currentUser?.email]
-        // }).then(() => {
-        //     navigation.navigate('Chat', { id: newRef.id, chatName: groupName });
-        //     deSelectItems();
-        //     setModalVisible(false);
-        //     setGroupName("");
-        // });
+        usersToAdd.unshift({ email: currentUser?.email!, name: currentUser?.displayName!, deletedFromChat: false });
+        console.log(usersToAdd);
+
+        const newRef = firestore().collection("chats").doc();
+        newRef.set({
+            lastUpdated: Date.now(),
+            users: usersToAdd,
+            messages: [],
+            groupName: groupName,
+            groupAdmins: [currentUser?.email]
+        }).then(() => {
+            //@ts-ignore
+            navigation.navigate('Chat', { id: newRef.id, chatName: groupName });
+            deSelectItems();
+            setModalVisible(false);
+            setGroupName("");
+        });
     }
 
     return (
@@ -106,8 +117,8 @@ const Group: React.FC = () => {
                 </View>
             ) : (
                 <ScrollView>
-                    {/* {users.map(user => (
-                        user.data().email !== auth?.currentUser?.email &&
+                    {users.map(user => (
+                        user.email !== currentUser?.email &&
                         <React.Fragment key={user.id}>
                             <ContactRow
                                 style={getSelected(user) ? styles.selectedContactRow : ""}
@@ -118,7 +129,7 @@ const Group: React.FC = () => {
                                 showForwardIcon={false}
                             />
                         </React.Fragment>
-                    ))} */}
+                    ))}
                 </ScrollView>
             )}
             {selectedItems.length > 0 && (
@@ -136,16 +147,25 @@ const Group: React.FC = () => {
                     setModalVisible(!modalVisible);
                 }}
             >
-                <View style={styles.modalView}>
-                    <Text style={styles.modalText}>Enter Group Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        onChangeText={setGroupName}
-                        value={groupName}
-                        placeholder="Group Name"
-                        onSubmitEditing={handleCreateGroup} // Create group on submit
-                    />
+                <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Enter Group Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            onChangeText={setGroupName}
+                            value={groupName}
+                            placeholder="Group Name"
+                            onSubmitEditing={handleCreateGroup} // Create group on submit
+                        />
+
+                        <TouchableOpacity onPress={handleCreateGroup}>
+                            <View style={styles.fabContainerButton}>
+                                <Ionicons name="arrow-forward-outline" size={24} color={'white'} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
             </Modal>
         </Pressable>
     );
@@ -156,6 +176,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 12,
         right: 12
+    },
+
+    fabContainerButton: {
+        width: 200,
+        height: 40,
+        backgroundColor: colors.teal,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     fabContainer: {
         width: 56,
@@ -190,8 +219,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 20,
         padding: 35,
-        alignItems: "center",
-        elevation: 5
+        elevation: 5,
     },
     modalText: {
         marginBottom: 15,
@@ -204,7 +232,6 @@ const styles = StyleSheet.create({
         borderColor: 'gray',
         borderWidth: 1,
         marginBottom: 15,
-        width: '100%',
         paddingHorizontal: 10
     }
 });

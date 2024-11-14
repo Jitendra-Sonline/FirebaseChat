@@ -3,22 +3,14 @@ import { TouchableOpacity, Text, View, Image, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from "../config/constants";
 
-const ChatHeader = ({ chatName, chatId }:any) => {
+const ChatHeader = ({ chatName, chatId }: any) => {
     const navigation = useNavigation();
 
     return (
         <TouchableOpacity
             style={styles.container}
-            onPress={() => navigation.navigate('ChatInfo', { chatId, chatName })}
-        >
-            <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('ChatInfo', { chatId, chatName })}>
-                <View>
-                    <Text style={styles.avatarLabel}>
-                        {chatName.split(' ').reduce((prev, current) => `${prev}${current[0]}`, '')}
-                    </Text>
-                </View>
-            </TouchableOpacity>
-
+            //@ts-ignore
+            onPress={() => navigation.navigate('ChatInfo', { chatId, chatName })}>
             <Text style={styles.chatName}>{chatName}</Text>
         </TouchableOpacity>
     );

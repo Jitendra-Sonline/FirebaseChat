@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { colors } from '../config/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Cell from '../components/Cell';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import firestore from '@react-native-firebase/firestore';
+
 
 interface ChatInfoProps {
   route: {
@@ -23,32 +25,34 @@ const ChatInfo: React.FC<ChatInfoProps> = ({ route }) => {
   const { chatId, chatName } = route.params;
   const [users, setUsers] = useState<User[]>([]);
   const [groupName, setGroupName] = useState<string>('');
+  const [admin, setAdmin] = useState<string>('');
 
   useEffect(() => {
     const fetchChatInfo = async () => {
-      // try {
-      //   const chatRef = doc(database, 'chats', chatId);
-      //   const chatDoc = await getDoc(chatRef);
-
-      //   if (chatDoc.exists()) {
-      //     const chatData = chatDoc.data();
-      //     if (chatData) {
-      //       if (Array.isArray(chatData.users)) {
-      //         setUsers(chatData.users);
-      //       }
-      //       if (chatData.groupName) {
-      //         setGroupName(chatData.groupName);
-      //       }
-      //     } else {
-      //       setUsers([]);
-      //     }
-      //   } else {
-      //     Alert.alert('Error', 'Chat does not exist');
-      //   }
-      // } catch (error) {
-      //   Alert.alert('Error', 'An error occurred while fetching chat info');
-      //   console.error('Error fetching chat info: ', error);
-      // }
+      try {
+        const chatDocRef = firestore().collection('chats').doc(chatId);
+        const chatDoc: any = await chatDocRef.get();
+        if (chatDoc.exists) {
+          const chatData = chatDoc.data();
+          console.log(chatData.groupAdmins[0]);
+          if (chatData) {
+            setAdmin(chatData.groupAdmins[0])
+            if (Array.isArray(chatData.users)) {
+              setUsers(chatData.users);
+            }
+            if (chatData.groupName) {
+              setGroupName(chatData.groupName);
+            }
+          } else {
+            setUsers([]);
+          }
+        } else {
+          Alert.alert('Error', 'Chat does not exist');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'An error occurred while fetching chat info');
+        console.error('Error fetching chat info: ', error);
+      }
     };
 
     fetchChatInfo();
@@ -61,6 +65,7 @@ const ChatInfo: React.FC<ChatInfoProps> = ({ route }) => {
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
       </View>
+      {admin == item.email && <Text style={styles.userEmail}>{"Admin"}</Text>}
     </View>
   );
 
@@ -173,6 +178,7 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     marginLeft: 12,
+    flex: 1
   },
   userName: {
     fontSize: 16,

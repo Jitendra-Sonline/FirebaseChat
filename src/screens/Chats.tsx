@@ -76,30 +76,6 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
         }, [])
     );
 
-    useEffect(() => {
-        updateNavigationOptions();
-    }, [selectedItems]);
-
-    const updateNavigationOptions = () => {
-        if (selectedItems.length > 0) {
-            navigation.setOptions({
-                headerRight: () => (
-                    <TouchableOpacity style={styles.trashBin}>
-                        <Ionicons name="trash" size={24} color={colors.teal} />
-                    </TouchableOpacity>
-                ),
-                headerLeft: () => (
-                    <Text style={styles.itemCount}>{selectedItems.length}</Text>
-                ),
-            });
-        } else {
-            navigation.setOptions({
-                headerRight: null,
-                headerLeft: null,
-            });
-        }
-    };
-
     const handleChatName = (chat: Chat): string => {
         const users = chat._data.users;
         if (chat._data.groupName) {
@@ -127,9 +103,7 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
         navigation.navigate('Chat', { id: chat.id, chatName: handleChatName(chat) });
     };
 
-    const handleLongPress = (chat: Chat) => {
-        selectItems(chat);
-    };
+ 
 
     const selectItems = (chat: Chat) => {
         if (selectedItems.includes(chat.id)) {
@@ -191,7 +165,6 @@ const Chats: React.FC<ChatsProps> = ({ setUnreadCount }) => {
                                     subtitle={handleSubtitle(chat)}
                                     subtitle2={handleSubtitle2(chat)}
                                     onPress={() => handleOnPress(chat)}
-                                    onLongPress={() => handleLongPress(chat)}
                                     selected={getSelected(chat)}
                                     showForwardIcon={false}
                                     newMessageCount={newMessages[chat.id] || 0}

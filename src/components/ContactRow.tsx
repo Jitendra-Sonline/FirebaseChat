@@ -3,9 +3,9 @@ import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import { colors } from "../config/constants";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-const ContactRow = ({ name, subtitle, onPress, style, onLongPress, selected, showForwardIcon = true, subtitle2, newMessageCount }:any) => {
+const ContactRow = ({ name, subtitle, onPress, style,selected, showForwardIcon = true, subtitle2, newMessageCount }:any) => {
     return (
-        <TouchableOpacity style={[styles.row, style]} onPress={onPress} onLongPress={onLongPress}>
+        <TouchableOpacity style={[styles.row, style]} onPress={onPress}>
             <View style={styles.avatar}>
                 <Text style={styles.avatarLabel}>
                     {name?.trim()?.split(' ')?.reduce((prev:any, current:any) => `${prev}${current[0]}`, '')}
